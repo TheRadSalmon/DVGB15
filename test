@@ -1,0 +1,98 @@
+#include <kaulab.h>
+
+int FirstUse = 0;
+int LineRead = 0;
+
+int RightCount = 0;
+int LeftCount = 0;
+
+int UltraSensorDist = 0;
+bool isAvoiding = false; // Prevents TaskLineSensor from interfering during avoidance
+
+void TaskSonicSensor() {
+  // If already dodging, do not check distance again until finished
+  if (isAvoiding) return;
+
+  UltraSensorDist = zRobotGetUltraSensor();
+
+  // Trigger when block is close (~12 cm / 120 mm)
+  if (UltraSensorDist > 0 && UltraSensorDist <= 40) {
+    isAvoiding = true; // Lock TaskLineSensor control
+
+    // Step 1: Turn away from block
+    if (LeftCount >= RightCount) {
+      zRobotSetMotorSpeed(1, -120); // Turn right 
+      zRobotSetMotorSpeed(2, -120);
+    } else {
+      zRobotSetMotorSpeed(1, -120);  // Turn Left
+      zRobotSetMotorSpeed(2, -120);
+    }
+    delay(400);
+
+    // Step 2: Pass the block
+    zRobotSetMotorSpeed(1, -120);
+    zRobotSetMotorSpeed(2, 120);
+    delay(800);
+
+    // Step 3: Turn back toward line
+    if (LeftCount >= RightCount) {
+      zRobotSetMotorSpeed(1, -120);  // Turn Left
+      zRobotSetMotorSpeed(2, -120);
+    } else {
+      zRobotSetMotorSpeed(1, 120); // Turn Right
+      zRobotSetMotorSpeed(2, 120);
+    }
+    delay(400);
+
+    // Step 4: Drive forward until black line is found again
+    zRobotSetMotorSpeed(1, -120);
+    zRobotSetMotorSpeed(2, 120);
+    while (zRobotGetLineSensor() == 3) {
+      delay(10);
+    }
+
+    isAvoiding = false; // Release lock for TaskLineSensor
+  }
+}
+
+void TaskLineSensor() {
+  if (isAvoiding) return; // Yield control to Ultrasonic task while maneuvering
+
+  LineRead = zRobotGetLineSensor();
+
+  if (LineRead == 0) {
+    zRobotSetMotorSpeed(1, -120);
+    zRobotSetMotorSpeed(2, 120);
+  } else if (LineRead == 1) {
+    zRobotSetMotorSpeed(1, -120);
+    zRobotSetMotorSpeed(2, 90);
+    FirstUse = 1;
+  } else if (LineRead == 2) {
+    zRobotSetMotorSpeed(1, -90);
+    zRobotSetMotorSpeed(2, 120);
+    FirstUse = 2;
+  } else if (LineRead == 3) {
+    if (FirstUse == 1) {
+      zRobotSetMotorSpeed(1, -130);
+      zRobotSetMotorSpeed(2, 50);
+      RightCount++;
+    } else if (FirstUse == 2) {
+      zRobotSetMotorSpeed(1, -50);
+      zRobotSetMotorSpeed(2, 130);
+      LeftCount++;
+    }
+  }
+}
+
+void setup() {
+  zInitialize();
+
+  zScheduleTask(TaskLineSensor, 2, 1);
+  zScheduleTask(TaskSonicSensor, 3, 2);
+
+  zStart();
+}
+
+void loop() {
+  // Main execution handled by zScheduleTask scheduler
+}
