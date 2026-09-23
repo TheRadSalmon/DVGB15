@@ -18,7 +18,7 @@ void TaskSonicSensor() {
   
 
   // Trigger when block is cl2ose (~4 cm / 40 mm)
-  if (UltraSensorDist <= 20) {
+  if (UltraSensorDist <20) {
 
     TickStart = xTaskGetTickCount();
   
@@ -31,7 +31,7 @@ void TaskSonicSensor() {
         zRobotSetMotorSpeed(1, 120);  // Turn right
         zRobotSetMotorSpeed(2, 120);
      }
-  }
+  
 
     if(xTaskGetTickCount() > 60 + TickStart && xTaskGetTickCount() <= 100 + TickStart){
       zRobotSetMotorSpeed(1, -120);
@@ -47,12 +47,11 @@ void TaskSonicSensor() {
         zRobotSetMotorSpeed(2, -120);
       }
     }
-
+  }
     // Step 4: Drive forward until black line is found again
     zRobotSetMotorSpeed(1, -120);
     zRobotSetMotorSpeed(2, 120);
-
-    isAvoiding = false; // Release lock for TaskLineSensor
+  
 }
 
 void TaskLineSensor() {
@@ -93,13 +92,126 @@ void TaskLineSensor() {
 void setup() {
   zInitialize();
 
+  zScheduleTask(TaskSonicSensor, 4, 2);
   zScheduleTask(TaskLineSensor, 2, 2);
-  zScheduleTask(TaskSonicSensor, 20, 2); 
+  
 
   zStart();
 }
 
 void loop() {
+
+  //int val = zRobotGetUltraSensor();
+  //Serial.println(val);
+  
+
+
+}#include <kaulab.h>
+
+int FirstUse = 0;
+int LineRead = 0;
+
+int RightCount = 0;
+int LeftCount = 0;
+
+int UltraSensorDist = 0;
+bool isAvoiding = false; // Prevents TaskLineSensor from interfering during avoidance
+
+int TickStart;
+
+
+void TaskSonicSensor() {
+
+  UltraSensorDist = zRobotGetUltraSensor();
+  
+
+  // Trigger when block is cl2ose (~4 cm / 40 mm)
+  if (UltraSensorDist <20) {
+
+    TickStart = xTaskGetTickCount();
+  
+    if(xTaskGetTickCount() <= (60 + TickStart))
+
+      if (LeftCount < RightCount) {
+        zRobotSetMotorSpeed(1, -120); // Turn left 
+        zRobotSetMotorSpeed(2, -120);
+      } else {
+        zRobotSetMotorSpeed(1, 120);  // Turn right
+        zRobotSetMotorSpeed(2, 120);
+     }
+  
+
+    if(xTaskGetTickCount() > 60 + TickStart && xTaskGetTickCount() <= 100 + TickStart){
+      zRobotSetMotorSpeed(1, -120);
+      zRobotSetMotorSpeed(2, 120);
+    }
+
+    if(xTaskGetTickCount() > 100 + TickStart && xTaskGetTickCount() <= 160 + TickStart){
+      if (LeftCount > RightCount) {
+        zRobotSetMotorSpeed(1, 120);  // Turn right
+        zRobotSetMotorSpeed(2, 120);
+      } else {
+        zRobotSetMotorSpeed(1, -120); // Turn left
+        zRobotSetMotorSpeed(2, -120);
+      }
+    }
+  }
+    // Step 4: Drive forward until black line is found again
+    zRobotSetMotorSpeed(1, -120);
+    zRobotSetMotorSpeed(2, 120);
+  
+}
+
+void TaskLineSensor() {
+
+
+  LineRead = zRobotGetLineSensor();
+
+  if (LineRead == 0) {
+    zRobotSetMotorSpeed(1, -120);
+    zRobotSetMotorSpeed(2, 120);
+  } 
+  
+  else if (LineRead == 1) {
+    zRobotSetMotorSpeed(1, -120);
+    zRobotSetMotorSpeed(2, 90);
+    FirstUse = 1;
+  } 
+  
+  else if (LineRead == 2) {
+    zRobotSetMotorSpeed(1, -90);
+    zRobotSetMotorSpeed(2, 120);
+    FirstUse = 2;
+  } 
+
+  else if (LineRead == 3) {
+    if (FirstUse == 1) {
+      zRobotSetMotorSpeed(1, -130);
+      zRobotSetMotorSpeed(2, 50);
+      RightCount++;
+    } else if (FirstUse == 2) {
+      zRobotSetMotorSpeed(1, -50);
+      zRobotSetMotorSpeed(2, 130);
+      LeftCount++;
+    }
+  }
+}
+
+void setup() {
+  zInitialize();
+
+  zScheduleTask(TaskSonicSensor, 4, 2);
+  zScheduleTask(TaskLineSensor, 2, 2);
+  
+
+  zStart();
+}
+
+void loop() {
+
+  //int val = zRobotGetUltraSensor();
+  //Serial.println(val);
+  
 
 
 }
