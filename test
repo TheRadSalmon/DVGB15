@@ -9,7 +9,7 @@ int LeftCount = 0;
 int UltraSensorDist = 0;
 bool isAvoiding = false; // Prevents TaskLineSensor from interfering during avoidance
 
-int TickCount = 0;
+int TickStart;
 
 
 void TaskSonicSensor() {
@@ -20,8 +20,9 @@ void TaskSonicSensor() {
   // Trigger when block is cl2ose (~4 cm / 40 mm)
   if (UltraSensorDist <= 20) {
 
-    TickCount = xTaskGetTickCount();
-    if(TickCount <= 60)
+    TickStart = xTaskGetTickCount();
+  
+    if(xTaskGetTickCount() <= (60 + TickStart))
 
       if (LeftCount < RightCount) {
         zRobotSetMotorSpeed(1, -120); // Turn left 
@@ -32,12 +33,12 @@ void TaskSonicSensor() {
      }
   }
 
-    if(TickCount > 60 && TickCount <= 100){
+    if(xTaskGetTickCount() > 60 + TickStart && xTaskGetTickCount() <= 100 + TickStart){
       zRobotSetMotorSpeed(1, -120);
       zRobotSetMotorSpeed(2, 120);
     }
 
-    if(TickCount > 100 && TickCount <= 160){
+    if(xTaskGetTickCount() > 100 + TickStart && xTaskGetTickCount() <= 160 + TickStart){
       if (LeftCount > RightCount) {
         zRobotSetMotorSpeed(1, 120);  // Turn right
         zRobotSetMotorSpeed(2, 120);
@@ -93,11 +94,12 @@ void setup() {
   zInitialize();
 
   zScheduleTask(TaskLineSensor, 2, 2);
-  zScheduleTask(TaskSonicSensor, 20, 2);
+  zScheduleTask(TaskSonicSensor, 20, 2); 
 
   zStart();
 }
 
 void loop() {
-  // Main execution handled by zScheduleTask scheduler
+
+
 }
