@@ -9,23 +9,25 @@ int LeftCount = 0;
 int UltraSensorDist = 0;
 bool isAvoiding = false; // Prevents TaskLineSensor from interfering during avoidance
 
+
+
 void TaskSonicSensor() {
   // If already dodging, do not check distance again until finished
   if (isAvoiding) return;
 
   UltraSensorDist = zRobotGetUltraSensor();
 
-  // Trigger when block is close (~12 cm / 120 mm)
-  if (UltraSensorDist > 0 && UltraSensorDist <= 40) {
+  // Trigger when block is close (~4 cm / 40 mm)
+  if (UltraSensorDist <= 20) {
     isAvoiding = true; // Lock TaskLineSensor control
 
     // Step 1: Turn away from block
-    if (LeftCount >= RightCount) {
-      zRobotSetMotorSpeed(1, -120); // Turn right 
+    if (LeftCount > RightCount) {
+      zRobotSetMotorSpeed(1, -120); // Turn left 
       zRobotSetMotorSpeed(2, -120);
     } else {
-      zRobotSetMotorSpeed(1, -120);  // Turn Left
-      zRobotSetMotorSpeed(2, -120);
+      zRobotSetMotorSpeed(1, 120);  // Turn right
+      zRobotSetMotorSpeed(2, 120);
     }
     delay(400);
 
@@ -35,12 +37,12 @@ void TaskSonicSensor() {
     delay(800);
 
     // Step 3: Turn back toward line
-    if (LeftCount >= RightCount) {
-      zRobotSetMotorSpeed(1, -120);  // Turn Left
-      zRobotSetMotorSpeed(2, -120);
-    } else {
-      zRobotSetMotorSpeed(1, 120); // Turn Right
+    if (LeftCount > RightCount) {
+      zRobotSetMotorSpeed(1, 120);  // Turn right
       zRobotSetMotorSpeed(2, 120);
+    } else {
+      zRobotSetMotorSpeed(1, -120); // Turn left
+      zRobotSetMotorSpeed(2, -120);
     }
     delay(400);
 
@@ -87,8 +89,8 @@ void TaskLineSensor() {
 void setup() {
   zInitialize();
 
-  zScheduleTask(TaskLineSensor, 2, 1);
-  zScheduleTask(TaskSonicSensor, 3, 2);
+  zScheduleTask(TaskLineSensor, 2, 2);
+  zScheduleTask(TaskSonicSensor, 2, 2);
 
   zStart();
 }
