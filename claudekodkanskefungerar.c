@@ -27,7 +27,7 @@ void TaskSonicSensor() {
     TickType_t elapsed = xTaskGetTickCount() - TickStart;
 
     // Fas 1: sväng in mot insidan av banan (0-60 ticks)
-    if (elapsed <= 60) {
+    if (elapsed <= 20) {
       if (LeftCount < RightCount) {
         zRobotSetMotorSpeed(1, -120); // Sväng vänster
         zRobotSetMotorSpeed(2, -120);
@@ -36,21 +36,28 @@ void TaskSonicSensor() {
         zRobotSetMotorSpeed(2, 120);
       }
     }
-    // Fas 2: kör förbi hindret rakt/vridande (60-100 ticks)
-    else if (elapsed <= 100) {
-      zRobotSetMotorSpeed(1, -120);
-      zRobotSetMotorSpeed(2, 120);
-    }
+
     // Fas 3: sväng tillbaka mot linjen (100-160 ticks)
-    else if (elapsed <= 160) {
-      if (LeftCount > RightCount) {
-        zRobotSetMotorSpeed(1, 120);  // Sväng höger
+    else if (elapsed <= 165) {
+      if (LeftCount < RightCount) {
+        zRobotSetMotorSpeed(1, -50);  // Sväng höger
         zRobotSetMotorSpeed(2, 120);
       } else {
         zRobotSetMotorSpeed(1, -120); // Sväng vänster
-        zRobotSetMotorSpeed(2, -120);
+        zRobotSetMotorSpeed(2, 50);
       }
     }
+
+    else if(elapsed <= 190){
+      if (LeftCount < RightCount) {
+        zRobotSetMotorSpeed(1, -120); // Sväng vänster
+        zRobotSetMotorSpeed(2, -120);
+      } else {
+        zRobotSetMotorSpeed(1, 120);  // Sväng höger
+        zRobotSetMotorSpeed(2, 120);
+      }
+    }
+    
     // Manövern klar - lämna över till linjesensorn igen
     else {
       isAvoiding = false;
