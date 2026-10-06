@@ -115,9 +115,4 @@ void setup() {
 }
 
 void loop() {
-
-  //int val = zRobotGetUltraSensor();
-  //Serial.println(val);
-
-
 }
