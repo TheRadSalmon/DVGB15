@@ -7,7 +7,7 @@ int RightCount = 0;
 int LeftCount = 0;
 
 int UltraSensorDist = 0;
-bool isAvoiding = false; // Förhindrar att TaskLineSensor stör under undvikning
+bool isAvoiding = false; 
 
 TickType_t TickStart = 0;
 
@@ -16,7 +16,6 @@ void TaskSonicSensor() {
 
   UltraSensorDist = zRobotGetUltraSensor();
 
-  // Starta manövern bara vid FLANKEN där hindret upptäcks (inte varje varv)
   if (!isAvoiding && UltraSensorDist <= 20) {
     isAvoiding = true;
     TickStart = xTaskGetTickCount();
@@ -26,39 +25,36 @@ void TaskSonicSensor() {
 
     TickType_t elapsed = xTaskGetTickCount() - TickStart;
 
-    // Fas 1: sväng in mot insidan av banan (0-60 ticks)
     if (elapsed <= 20) {
       if (LeftCount < RightCount) {
-        zRobotSetMotorSpeed(1, -120); // Sväng vänster
+        zRobotSetMotorSpeed(1, -120);
         zRobotSetMotorSpeed(2, -120);
       } else {
-        zRobotSetMotorSpeed(1, 120);  // Sväng höger
+        zRobotSetMotorSpeed(1, 120);
         zRobotSetMotorSpeed(2, 120);
       }
     }
 
-    // Fas 3: sväng tillbaka mot linjen (100-160 ticks)
     else if (elapsed <= 165) {
       if (LeftCount < RightCount) {
-        zRobotSetMotorSpeed(1, -50);  // Sväng höger
+        zRobotSetMotorSpeed(1, -50);
         zRobotSetMotorSpeed(2, 120);
       } else {
-        zRobotSetMotorSpeed(1, -120); // Sväng vänster
+        zRobotSetMotorSpeed(1, -120);
         zRobotSetMotorSpeed(2, 50);
       }
     }
 
     else if(elapsed <= 200 && zRobotGetLineSensor() != 0){
       if (LeftCount < RightCount ) {
-        zRobotSetMotorSpeed(1, -120); // Sväng vänster
+        zRobotSetMotorSpeed(1, -120);
         zRobotSetMotorSpeed(2, -120);
       } else {
-        zRobotSetMotorSpeed(1, 120);  // Sväng höger
+        zRobotSetMotorSpeed(1, 120);
         zRobotSetMotorSpeed(2, 120);
       }
     }
     
-    // Manövern klar - lämna över till linjesensorn igen
     else {
       isAvoiding = false;
     }
@@ -67,7 +63,6 @@ void TaskSonicSensor() {
 
 void TaskLineSensor() {
 
-  // Låt sonic-tasken sköta styrningen helt under undvikningsmanövern
   if (isAvoiding) {
     return;
   }
