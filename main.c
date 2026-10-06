@@ -1,133 +1,123 @@
 #include <kaulab.h>
 
-int FirstUse;
-int LineRead;
+int FirstUse = 0;
+int LineRead = 0;
 
 int RightCount = 0;
 int LeftCount = 0;
 
-int UltraSensorDist;
-bool IsUltraSensor = false;
-bool NeedGetBack = false;
+int UltraSensorDist = 0;
+bool isAvoiding = false; // Förhindrar att TaskLineSensor stör under undvikning
 
-//bool IsLineRead = false;
+TickType_t TickStart = 0;
 
 
-void TaskSonicSensor(){
+void TaskSonicSensor() {
+
   UltraSensorDist = zRobotGetUltraSensor();
 
-
-  if(UltraSensorDist >= 0 && UltraSensorDist <= 400){
-    IsUltraSensor = true;
+  // Starta manövern bara vid FLANKEN där hindret upptäcks (inte varje varv)
+  if (!isAvoiding && UltraSensorDist <= 20) {
+    isAvoiding = true;
+    TickStart = xTaskGetTickCount();
   }
 
+  if (isAvoiding) {
 
+    TickType_t elapsed = xTaskGetTickCount() - TickStart;
 
-
-  if(IsUltraSensor == true){
-
-    if(LeftCount > RightCount){
-
-      zRobotSetMotorSpeed(1, -120);
-      zRobotSetMotorSpeed(2, 90);
-
+    // Fas 1: sväng in mot insidan av banan (0-60 ticks)
+    if (elapsed <= 20) {
+      if (LeftCount < RightCount) {
+        zRobotSetMotorSpeed(1, -120); // Sväng vänster
+        zRobotSetMotorSpeed(2, -120);
+      } else {
+        zRobotSetMotorSpeed(1, 120);  // Sväng höger
+        zRobotSetMotorSpeed(2, 120);
+      }
     }
 
-    else if(LeftCount < RightCount){
+    // Fas 3: sväng tillbaka mot linjen (100-160 ticks)
+    else if (elapsed <= 165) {
+      if (LeftCount < RightCount) {
+        zRobotSetMotorSpeed(1, -50);  // Sväng höger
+        zRobotSetMotorSpeed(2, 120);
+      } else {
+        zRobotSetMotorSpeed(1, -120); // Sväng vänster
+        zRobotSetMotorSpeed(2, 50);
+      }
+    }
 
-      zRobotSetMotorSpeed(1, -90);
-      zRobotSetMotorSpeed(2, 120);
+    else if(elapsed <= 200 && zRobotGetLineSensor() != 0){
+      if (LeftCount < RightCount ) {
+        zRobotSetMotorSpeed(1, -120); // Sväng vänster
+        zRobotSetMotorSpeed(2, -120);
+      } else {
+        zRobotSetMotorSpeed(1, 120);  // Sväng höger
+        zRobotSetMotorSpeed(2, 120);
+      }
+    }
     
+    // Manövern klar - lämna över till linjesensorn igen
+    else {
+      isAvoiding = false;
     }
-
-    IsUltraSensor = false;
-    NeedGetBack = true;
-  }
-
-
-
-  if(NeedGetBack == true){
-    
-    if(LeftCount > RightCount){
-
-      zRobotSetMotorSpeed(1, -90);
-      zRobotSetMotorSpeed(2, 120);
-
-    }
-
-    else if(LeftCount < RightCount){
-
-      zRobotSetMotorSpeed(1, -120);
-      zRobotSetMotorSpeed(2, 90);
-    
-    }
-
-    NeedGetBack = false;
   }
 }
 
+void TaskLineSensor() {
 
-
-
-void TaskLineSensor(){
-
-  LineRead = zRobotGetLineSensor();
-  //IsLineRead = true; 
-
-  if(LineRead == 0){
-    zRobotSetMotorSpeed(1, -120);
-    zRobotSetMotorSpeed(2, 120);
-  
+  // Låt sonic-tasken sköta styrningen helt under undvikningsmanövern
+  if (isAvoiding) {
+    return;
   }
 
+  LineRead = zRobotGetLineSensor();
 
-  if(LineRead == 1){
+  if (LineRead == 0) {
+    zRobotSetMotorSpeed(1, -120);
+    zRobotSetMotorSpeed(2, 120);
+  }
+
+  else if (LineRead == 1) {
     zRobotSetMotorSpeed(1, -120);
     zRobotSetMotorSpeed(2, 90);
-
     FirstUse = 1;
   }
 
-
-  if(LineRead == 2){
+  else if (LineRead == 2) {
     zRobotSetMotorSpeed(1, -90);
     zRobotSetMotorSpeed(2, 120);
-
     FirstUse = 2;
   }
 
-
-  if(LineRead == 3){ 
-    if(FirstUse == 1){
+  else if (LineRead == 3) {
+    if (FirstUse == 1) {
       zRobotSetMotorSpeed(1, -130);
       zRobotSetMotorSpeed(2, 50);
-      RightCount =  RightCount + 1;
-    
-    }else if(FirstUse == 2){
+      RightCount++;
+    } else if (FirstUse == 2) {
       zRobotSetMotorSpeed(1, -50);
       zRobotSetMotorSpeed(2, 130);
-      LeftCount =  LeftCount + 1;
-
+      LeftCount++;
     }
   }
-
-
 }
-
-
-
-
 
 void setup() {
   zInitialize();
 
-  zScheduleTask(TaskLineSensor, 2, 1);
-  zScheduleTask(TaskSonicSensor, 3, 2);
+  zScheduleTask(TaskSonicSensor, 4, 2);
+  zScheduleTask(TaskLineSensor, 2, 2);
+
 
   zStart();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+
+  //int val = zRobotGetUltraSensor();
+  //Serial.println(val);
+
 
 }
